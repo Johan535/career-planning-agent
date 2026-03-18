@@ -9,9 +9,9 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 /*
-* 利用Spring AI 框架调用AI大模型
-*
-* */
+ * 利用Spring AI 框架调用AI大模型
+ *
+ * */
 @Component
 public class SpringAiInvoke implements CommandLineRunner {
 
