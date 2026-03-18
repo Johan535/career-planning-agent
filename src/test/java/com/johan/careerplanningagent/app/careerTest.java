@@ -31,4 +31,11 @@ class careerTest {
         String answer3 = career.chat(message3,chatId);
         Assertions.assertNotNull(answer3);
     }
+
+    @Test
+    void doChatWithReport() {
+        String chatId = UUID.randomUUID().toString();
+        String message ="你好，我是 johan,我想要了解一下跟电子商务有关的职业种类，但是我不知道有哪些";
+        career.doChatWithReport(message,chatId);
+    }
 }

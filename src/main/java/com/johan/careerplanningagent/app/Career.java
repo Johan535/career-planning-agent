@@ -5,6 +5,8 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Component
 public class Career {
     private static final org.slf4j.Logger log  = LoggerFactory.getLogger(Career.class);
@@ -32,6 +34,26 @@ public class Career {
         String text = chatResponse.getResult().getOutput().getText(); //获取结果
         log.info("text:{}",text);
         return text;
+    }
+
+    //定义结构化输出格式
+    record Report(String title, List<String> suggestions) {
+
+    }
+
+    /**
+     * AI 职业报告功能（支持结构化输出）
+     */
+    public Report doChatWithReport(String message,String chatId) {
+        Report report = chatClient
+                .prompt() //创建一个Prompt对象
+                .system(SYSTEM_PROMPT + "每次对话后都要生成职业规划结果，" +
+                        "标题为{用户名}的职业规划报告，内容为建议列表")
+                .user(message) //设置用户输入
+                .call()  //调用ChatClient对象，执行对话
+                .entity(Report.class);
+        log.info("loveReport:{}",report);
+        return report;
     }
 
 }
