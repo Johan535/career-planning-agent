@@ -1,4 +1,5 @@
 package com.johan.careerplanningagent.app;
+import com.johan.careerplanningagent.chatmemory.FileBasedChatMemory;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
@@ -19,6 +20,9 @@ public class Career {
 
     //通过构造函数注入来创建ChatClient的方式，目的是创建一个ChatClient对象，并设置系统提示语
     public Career(ChatModel dashscopeChatModel){
+        //使用基于文件的对话记忆
+        String fileDir =  System.getProperty("user.dir") + "/chat-memory";
+        FileBasedChatMemory fileBasedChatMemory = new FileBasedChatMemory(fileDir);
         this.chatClient = ChatClient.builder(dashscopeChatModel)
                 .defaultSystem(SYSTEM_PROMPT)
                 .build();
@@ -51,7 +55,7 @@ public class Career {
                         "标题为{用户名}的职业规划报告，内容为建议列表")
                 .user(message) //设置用户输入
                 .call()  //调用ChatClient对象，执行对话
-                .entity(Report.class);
+                .entity(Report.class); //获取结构化输出,自定义结构化输出格式
         log.info("loveReport:{}",report);
         return report;
     }
