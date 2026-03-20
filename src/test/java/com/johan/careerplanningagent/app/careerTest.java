@@ -12,7 +12,7 @@ class careerTest {
 
 
     @Resource
-    private Career career;
+    private CareerPlanningAgentApp career;
 
 
     @Test

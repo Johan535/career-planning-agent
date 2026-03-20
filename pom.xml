@@ -99,6 +99,12 @@
             <artifactId>kryo</artifactId>
             <version>5.6.2</version>
         </dependency>
+        <!-- markdown格式文件读取（rag外挂）-->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-markdown-document-reader</artifactId>
+            <version>1.0.0-M6</version>
+        </dependency>
     </dependencies>
 
     <build>
