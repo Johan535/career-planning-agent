@@ -30,11 +30,14 @@ public class CareerPlanningAgentApp {
             "所有建议均需贴合用户实际情况。";
 
     //AI职业规划师知识库问答功能
-    @Resource
+    @Resource(name = "pgVectorStore")
     private VectorStore vectorStore;
 
     @Resource
     private CarePlanningAgentRagCloudAdvisor carePlanningAgentRagCloudAdvisor;
+
+    @Resource
+    private VectorStore pgVectorStore;
 
     //通过构造函数注入来创建ChatClient的方式，目的是创建一个ChatClient对象，并设置系统提示语
     public CareerPlanningAgentApp(ChatModel dashscopeChatModel){
@@ -99,10 +102,12 @@ public class CareerPlanningAgentApp {
                 .user(message) //设置用户输入
                 .advisors(spec -> spec.param(CHAT_MEMORY_CONVERSATION_ID_KEY, chatId) //根据会话ID进行对话记忆
                         .param(CHAT_MEMORY_RETRIEVE_SIZE_KEY, 10)) //实现会话记忆，保存最近十条聊天记录
-              /*  //应用RAG知识库问答！（核心代码就这一条）
+              /*  //应用RAG知识库问答（基于本地知识库）
                 .advisors(new QuestionAnswerAdvisor(vectorStore))*/
-                //应用RAG检索增强服务！
-                .advisors((Consumer<ChatClient.AdvisorSpec>) carePlanningAgentRagCloudAdvisor)
+                //应用RAG检索增强服务(基于云知识库)
+                //.advisors((Consumer<ChatClient.AdvisorSpec>) carePlanningAgentRagCloudAdvisor)
+                //应用RAG检索增强服务(基于PgVector向量存储)
+                .advisors(new QuestionAnswerAdvisor(pgVectorStore))
                 .call()  //调用ChatClient对象，执行对话
                 .chatResponse();
         String text = chatResponse.getResult().getOutput().getText();

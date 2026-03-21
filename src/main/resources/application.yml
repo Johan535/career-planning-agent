@@ -4,11 +4,20 @@ spring:
   ai:
      dashscope:
        api-key: sk-40ea760a6207445da466fa1b7fc0bf62
+  datasource:
+      url: jdbc:postgresql://pgm-uf6tq00m299ay556po.pg.rds.aliyuncs.com/career-planning-agent
+      username: my_user
+      password: qazwsxedc123A!
+  vectorstore:
+      pgvector:
+          index-type: HNSW
+          dimensions: 1536
+          distance-type: COSINE_DISTANCE
+          max-document-batch-size: 10000
 server:
   port: 8123
   servlet:
     context-path: /api
-
 
 # springdoc-openapi ??????
 springdoc:
@@ -22,6 +31,7 @@ springdoc:
     - group: 'default'
       paths-to-match: '/**'
       packages-to-scan: com.johan\careerplanningagent\controller
+
 # knife4j???????????????
 knife4j:
   enable: true

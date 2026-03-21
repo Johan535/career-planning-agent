@@ -22,15 +22,16 @@ public class CarePlanningAgentDocumentLoader {
     //可以通过这个来加载多个文档
     private final ResourcePatternResolver resourcePatternResolver;
 
+    //通过构造函数注入来创建MarkdownDocumentLoader对象
     public CarePlanningAgentDocumentLoader(ResourcePatternResolver resourcePatternResolver) {
         this.resourcePatternResolver = resourcePatternResolver;
     }
 
     public List<Document> loadMarkDowns(){
         List<Document> allDocuments = new ArrayList<>();
-        //加载多个文档
+        //加载多个文档 src/main/resources/markdowns/
         try {
-            Resource[] resources = resourcePatternResolver.getResources("classpath:markdowns/*.md");
+            Resource[] resources = resourcePatternResolver.getResources("classpath:document/*.md");
             for (Resource resource : resources) {
                 String filename = resource.getFilename();
                 MarkdownDocumentReaderConfig config = MarkdownDocumentReaderConfig.builder()
