@@ -1,0 +1,26 @@
+package com.johan.careerplanningagent.rag;
+
+
+import jakarta.annotation.Resource;
+import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.model.transformer.KeywordMetadataEnricher;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+
+/**
+ * 基于AI 的文档辕信息增强器（为文档补充元信息）
+ */
+@Component
+public class MyKeywordEnricher {
+
+    @Resource
+    private ChatModel chatModel; //ChatModel作用是获取模型
+
+    public List<Document> enrichDocuments(List<Document> documents) {
+        // 创建一个关键词信息增强器
+        KeywordMetadataEnricher keywordMetadataEnricher = new KeywordMetadataEnricher(chatModel, 5);
+        return keywordMetadataEnricher.apply( documents); //apply作用是添加关键词
+    }
+}

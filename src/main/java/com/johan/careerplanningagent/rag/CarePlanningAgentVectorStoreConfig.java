@@ -23,13 +23,18 @@ public class CarePlanningAgentVectorStoreConfig {
     @Resource
     private CarePlanningAgentDocumentLoader carePlanningAgentDocumentLoader;
 
+    @Resource
+    private  MyKeywordEnricher myKeywordEnricher;
+
     @Bean
     VectorStore carePlanningAgentVectorStore(EmbeddingModel dashscopeEmbeddingModel) {
         // 创建基于内存的向量数据库
         SimpleVectorStore simpleVectorStore = SimpleVectorStore.builder(dashscopeEmbeddingModel)
                 .build();
         List<Document> documents = carePlanningAgentDocumentLoader.loadMarkDowns(); // 加载文档
-        simpleVectorStore.add( documents); // 添加文档
+        //基于AI的自主增强(自动补充关键词元信息)
+        List<Document> enrichDocuments = myKeywordEnricher.enrichDocuments(documents); // 添加关键词
+        simpleVectorStore.add(enrichDocuments); // 添加文档
         return simpleVectorStore; // 返回向量数据库
     }
 }
