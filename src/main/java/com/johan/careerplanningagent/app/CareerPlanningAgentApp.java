@@ -1,6 +1,7 @@
 package com.johan.careerplanningagent.app;
 import com.johan.careerplanningagent.chatmemory.FileBasedChatMemory;
 import com.johan.careerplanningagent.rag.CarePlanningAgentRagCloudAdvisor;
+import com.johan.careerplanningagent.rag.QueryRewriter;
 import jakarta.annotation.Resource;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
@@ -33,11 +34,16 @@ public class CareerPlanningAgentApp {
     @Resource(name = "pgVectorStore")
     private VectorStore vectorStore;
 
+    //基于云知识库的RAG知识库问答功能
     @Resource
     private CarePlanningAgentRagCloudAdvisor carePlanningAgentRagCloudAdvisor;
 
+    //基于PgVector向量存储的RAG知识库问答功能
     @Resource
     private VectorStore pgVectorStore;
+
+    @Resource
+    private QueryRewriter queryRewriter;
 
     //通过构造函数注入来创建ChatClient的方式，目的是创建一个ChatClient对象，并设置系统提示语
     public CareerPlanningAgentApp(ChatModel dashscopeChatModel){
@@ -97,9 +103,10 @@ public class CareerPlanningAgentApp {
      * @return
      */
     private String doChatWithRag(String message,String chatId){
+        String rewrittenMessage = queryRewriter.doQueryRewrite(message); //查询重写
         ChatResponse chatResponse = chatClient
                 .prompt() //创建一个Prompt对象
-                .user(message) //设置用户输入
+                .user(rewrittenMessage) //设置用户输入(使用查询重写的结果)
                 .advisors(spec -> spec.param(CHAT_MEMORY_CONVERSATION_ID_KEY, chatId) //根据会话ID进行对话记忆
                         .param(CHAT_MEMORY_RETRIEVE_SIZE_KEY, 10)) //实现会话记忆，保存最近十条聊天记录
               /*  //应用RAG知识库问答（基于本地知识库）
@@ -114,5 +121,7 @@ public class CareerPlanningAgentApp {
         log.info("text:{}",text);
         return text;
     }
+
+
 
 }
