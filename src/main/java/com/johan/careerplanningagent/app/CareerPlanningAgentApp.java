@@ -1,6 +1,7 @@
 package com.johan.careerplanningagent.app;
 import com.johan.careerplanningagent.chatmemory.FileBasedChatMemory;
 import com.johan.careerplanningagent.rag.CarePlanningAgentRagCloudAdvisor;
+import com.johan.careerplanningagent.rag.CareerPlanningAgentCustomAdvisorFactory;
 import com.johan.careerplanningagent.rag.QueryRewriter;
 import jakarta.annotation.Resource;
 import org.slf4j.LoggerFactory;
@@ -31,7 +32,7 @@ public class CareerPlanningAgentApp {
             "所有建议均需贴合用户实际情况。";
 
     //AI职业规划师知识库问答功能
-    @Resource(name = "pgVectorStore")
+    @Resource
     private VectorStore vectorStore;
 
     //基于云知识库的RAG知识库问答功能
@@ -114,7 +115,13 @@ public class CareerPlanningAgentApp {
                 //应用RAG检索增强服务(基于云知识库)
                 //.advisors((Consumer<ChatClient.AdvisorSpec>) carePlanningAgentRagCloudAdvisor)
                 //应用RAG检索增强服务(基于PgVector向量存储)
-                .advisors(new QuestionAnswerAdvisor(pgVectorStore))
+          //      .advisors(new QuestionAnswerAdvisor(pgVectorStore))
+                .advisors(
+                        CareerPlanningAgentCustomAdvisorFactory.createCareerPlanningAgentCustom(
+                                pgVectorStore,
+                                "新人"
+                        )
+                )
                 .call()  //调用ChatClient对象，执行对话
                 .chatResponse();
         String text = chatResponse.getResult().getOutput().getText();
