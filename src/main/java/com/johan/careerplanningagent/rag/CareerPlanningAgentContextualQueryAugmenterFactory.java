@@ -11,12 +11,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class CareerPlanningAgentContextualQueryAugmenterFactory {
 
-    //创建一个上下文查询增强
+    //上下文查询增强
     public static ContextualQueryAugmenter createInstance(){
         PromptTemplate emptyContextPromptTemplate = new PromptTemplate(
                 """
                         你应该输出下面的内容：
-                        抱歉，我只能回答恋爱相关的问题，别的没办法帮到您哦
+                        抱歉，我只能回答职业相关的问题，别的没办法帮到您哦
                         有问题可以联系职业规划导师客服 https://blog.csdn.net/xwhxy?type=blog      
                          """
         );

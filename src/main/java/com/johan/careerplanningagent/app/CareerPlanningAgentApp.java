@@ -31,8 +31,8 @@ public class CareerPlanningAgentApp {
             "晋升路径、技能体系，擅长将复杂的职业规划需求拆解为可落地的步骤，沟通风格专业、耐心、易懂，拒绝空话、套话，" +
             "所有建议均需贴合用户实际情况。";
 
-    //AI职业规划师知识库问答功能
-    @Resource
+    //基于内存的AI职业规划师知识库问答功能
+    @Resource(name = "carePlanningAgentVectorStore")
     private VectorStore vectorStore;
 
     //基于云知识库的RAG知识库问答功能
@@ -40,7 +40,7 @@ public class CareerPlanningAgentApp {
     private CarePlanningAgentRagCloudAdvisor carePlanningAgentRagCloudAdvisor;
 
     //基于PgVector向量存储的RAG知识库问答功能
-    @Resource
+    @Resource(name = "pgVectorStore")
     private VectorStore pgVectorStore;
 
     @Resource
@@ -110,18 +110,19 @@ public class CareerPlanningAgentApp {
                 .user(rewrittenMessage) //设置用户输入(使用查询重写的结果)
                 .advisors(spec -> spec.param(CHAT_MEMORY_CONVERSATION_ID_KEY, chatId) //根据会话ID进行对话记忆
                         .param(CHAT_MEMORY_RETRIEVE_SIZE_KEY, 10)) //实现会话记忆，保存最近十条聊天记录
-              /*  //应用RAG知识库问答（基于本地知识库）
-                .advisors(new QuestionAnswerAdvisor(vectorStore))*/
+                //应用RAG知识库问答（基于本地知识库）
+                .advisors(new QuestionAnswerAdvisor(vectorStore))
                 //应用RAG检索增强服务(基于云知识库)
                 //.advisors((Consumer<ChatClient.AdvisorSpec>) carePlanningAgentRagCloudAdvisor)
                 //应用RAG检索增强服务(基于PgVector向量存储)
-          //      .advisors(new QuestionAnswerAdvisor(pgVectorStore))
-                .advisors(
+                .advisors(new QuestionAnswerAdvisor(pgVectorStore))
+                //应用自定义RAG检索增强服务
+/*                .advisors(
                         CareerPlanningAgentCustomAdvisorFactory.createCareerPlanningAgentCustom(
                                 pgVectorStore,
                                 "新人"
                         )
-                )
+                )*/
                 .call()  //调用ChatClient对象，执行对话
                 .chatResponse();
         String text = chatResponse.getResult().getOutput().getText();
