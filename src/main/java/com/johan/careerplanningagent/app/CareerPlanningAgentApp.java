@@ -1,22 +1,19 @@
 package com.johan.careerplanningagent.app;
-import com.johan.careerplanningagent.chatmemory.FileBasedChatMemory;
 import com.johan.careerplanningagent.rag.CarePlanningAgentRagCloudAdvisor;
-import com.johan.careerplanningagent.rag.CareerPlanningAgentCustomAdvisorFactory;
 import com.johan.careerplanningagent.rag.QueryRewriter;
 import jakarta.annotation.Resource;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.InMemoryChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.function.Consumer;
 
 import static org.springframework.ai.chat.client.advisor.AbstractChatMemoryAdvisor.CHAT_MEMORY_CONVERSATION_ID_KEY;
 import static org.springframework.ai.chat.client.advisor.AbstractChatMemoryAdvisor.CHAT_MEMORY_RETRIEVE_SIZE_KEY;
@@ -43,8 +40,13 @@ public class CareerPlanningAgentApp {
     @Resource(name = "pgVectorStore")
     private VectorStore pgVectorStore;
 
+    //查询重写功能
     @Resource
     private QueryRewriter queryRewriter;
+
+    //AI调用工具能力
+    @Resource
+    private ToolCallback[] toolCallbacks;
 
     //通过构造函数注入来创建ChatClient的方式，目的是创建一个ChatClient对象，并设置系统提示语
     public CareerPlanningAgentApp(ChatModel dashscopeChatModel){
@@ -130,6 +132,24 @@ public class CareerPlanningAgentApp {
         return text;
     }
 
+
+    // AI工具调用
+    /**
+     * AI 职业报告功能（支持调用工具）
+     */
+    public String doChatWithTool(String message, String chatId) {
+        ChatResponse chatResponse = chatClient
+                .prompt() //创建一个Prompt对象
+                .system(SYSTEM_PROMPT + "每次对话后都要生成职业规划结果，" +
+                        "标题为{用户名}的职业规划报告，内容为建议列表")
+                .user(message) //设置用户输入
+                .toolCallbacks(toolCallbacks)
+                .call()  //调用ChatClient对象，执行对话
+                .chatResponse();
+        String context = chatResponse.getResult().getOutput().getText();
+        log.info("context:{}",context);
+        return context;
+    }
 
 
 }
