@@ -27,18 +27,13 @@ class CareerPlanningAgentAppTest {
 
         testMessage("周末想去几家公司实习，推荐几个适合大二学生的公司？");
 
-
         testMessage("最近被公司炒了，看看编程导航网站（https://www.nowcoder.com/）的其他人是怎么解决矛盾的？");
-
 
         testMessage("直接下载一张适合做手机壁纸的程序员图片为文件");
 
-
         testMessage("执行 Python3 脚本来生成数据分析报告");
 
-
         testMessage("保存我的职业规划档案为文件");
-
 
         testMessage("生成一份‘大二到就业的规划指导’PDF，包含何时找实习，需要培养什么硬核技能");
     }
