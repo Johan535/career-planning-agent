@@ -10,6 +10,7 @@ import org.springframework.ai.chat.memory.InMemoryChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Component;
 
@@ -47,6 +48,11 @@ public class CareerPlanningAgentApp {
     //AI调用工具能力
     @Resource
     private ToolCallback[] toolCallbacks;
+
+    //AI调用MCP服务
+    @Resource
+    private ToolCallbackProvider toolCallbackProvider;
+
 
     //通过构造函数注入来创建ChatClient的方式，目的是创建一个ChatClient对象，并设置系统提示语
     public CareerPlanningAgentApp(ChatModel dashscopeChatModel){
@@ -133,7 +139,6 @@ public class CareerPlanningAgentApp {
     }
 
 
-    // AI工具调用
     /**
      * AI 职业报告功能（支持调用工具）
      */
@@ -150,6 +155,24 @@ public class CareerPlanningAgentApp {
         log.info("context:{}",context);
         return context;
     }
+
+    /**
+     * AI 职业报告功能（调用MCP服务）
+     */
+    public String doChatWithMcp(String message, String chatId) {
+        ChatResponse chatResponse = chatClient
+                .prompt() //创建一个Prompt对象
+                .system(SYSTEM_PROMPT + "每次对话后都要生成职业规划结果，" +
+                        "标题为{用户名}的职业规划报告，内容为建议列表")
+                .user(message) //设置用户输入
+                .toolCallbacks(toolCallbackProvider)
+                .call()  //调用ChatClient对象，执行对话
+                .chatResponse();
+        String context = chatResponse.getResult().getOutput().getText();
+        log.info("context:{}",context);
+        return context;
+    }
+
 
 
 }

@@ -14,6 +14,10 @@ spring:
           dimensions: 1536
           distance-type: COSINE_DISTANCE
           max-document-batch-size: 10000
+      mcp:
+        client:
+          stdio:
+            servers-configuration: classpath:mcp-servers.json
 server:
   port: 8123
   servlet:
@@ -31,6 +35,7 @@ springdoc:
     - group: 'default'
       paths-to-match: '/**'
       packages-to-scan: com.johan\careerplanningagent\controller
+
 
 # knife4j
 knife4j:
