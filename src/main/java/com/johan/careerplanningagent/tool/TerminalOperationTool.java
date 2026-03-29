@@ -2,6 +2,7 @@ package com.johan.careerplanningagent.tool;
 
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
+import org.springframework.stereotype.Component;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -10,6 +11,7 @@ import java.io.InputStreamReader;
 /**
  * 终端操作工具类
  */
+
 public class TerminalOperationTool {
 
     @Tool(description = "Execute a command in the terminal")

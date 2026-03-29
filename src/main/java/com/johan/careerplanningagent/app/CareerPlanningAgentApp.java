@@ -12,6 +12,7 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -37,9 +38,9 @@ public class CareerPlanningAgentApp {
     @Resource
     private CarePlanningAgentRagCloudAdvisor carePlanningAgentRagCloudAdvisor;
 
-    //基于PgVector向量存储的RAG知识库问答功能
+/*    //基于PgVector向量存储的RAG知识库问答功能
     @Resource(name = "pgVectorStore")
-    private VectorStore pgVectorStore;
+    private VectorStore pgVectorStore;*/
 
     //查询重写功能
     @Resource
@@ -48,10 +49,6 @@ public class CareerPlanningAgentApp {
     //AI调用工具能力
     @Resource
     private ToolCallback[] toolCallbacks;
-
-    //AI调用MCP服务
-    @Resource
-    private ToolCallbackProvider toolCallbackProvider;
 
 
     //通过构造函数注入来创建ChatClient的方式，目的是创建一个ChatClient对象，并设置系统提示语
@@ -123,7 +120,7 @@ public class CareerPlanningAgentApp {
                 //应用RAG检索增强服务(基于云知识库)
                 //.advisors((Consumer<ChatClient.AdvisorSpec>) carePlanningAgentRagCloudAdvisor)
                 //应用RAG检索增强服务(基于PgVector向量存储)
-                .advisors(new QuestionAnswerAdvisor(pgVectorStore))
+                //.advisors(new QuestionAnswerAdvisor(pgVectorStore))
                 //应用自定义RAG检索增强服务
 /*                .advisors(
                         CareerPlanningAgentCustomAdvisorFactory.createCareerPlanningAgentCustom(
@@ -156,22 +153,6 @@ public class CareerPlanningAgentApp {
         return context;
     }
 
-    /**
-     * AI 职业报告功能（调用MCP服务）
-     */
-    public String doChatWithMcp(String message, String chatId) {
-        ChatResponse chatResponse = chatClient
-                .prompt() //创建一个Prompt对象
-                .system(SYSTEM_PROMPT + "每次对话后都要生成职业规划结果，" +
-                        "标题为{用户名}的职业规划报告，内容为建议列表")
-                .user(message) //设置用户输入
-                .toolCallbacks(toolCallbackProvider)
-                .call()  //调用ChatClient对象，执行对话
-                .chatResponse();
-        String context = chatResponse.getResult().getOutput().getText();
-        log.info("context:{}",context);
-        return context;
-    }
 
 
 

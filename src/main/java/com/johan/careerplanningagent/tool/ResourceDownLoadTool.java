@@ -5,11 +5,14 @@ import cn.hutool.http.HttpUtil;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import com.johan.careerplanningagent.constant.FileConstant;
+import org.springframework.stereotype.Component;
+
 import java.io.File;
 
 /**
  * 资源下载类
  */
+
 public class ResourceDownLoadTool {
     @Tool(description = "Download a resource from a given URL")
     public String downloadResource(@ToolParam(description = "URL of the resource to download") String url, @ToolParam(description = "Name of the file to save the downloaded resource") String fileName) {

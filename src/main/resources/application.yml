@@ -2,22 +2,24 @@ spring:
   application :
     name: career-planning-agent
   ai:
-     dashscope:
-       api-key: sk-40ea760a6207445da466fa1b7fc0bf62
+    dashscope:
+      api-key: sk-40ea760a6207445da466fa1b7fc0bf62
+    mcp:
+      client:
+        enabled: false
+
   datasource:
       url: jdbc:postgresql://pgm-uf6tq00m299ay556po.pg.rds.aliyuncs.com/career-planning-agent
       username: my_user
       password: qazwsxedc123A!
-  vectorstore:
-      pgvector:
-          index-type: HNSW
-          dimensions: 1536
-          distance-type: COSINE_DISTANCE
-          max-document-batch-size: 10000
-      mcp:
-        client:
-          stdio:
-            servers-configuration: classpath:mcp-servers.json
+#  vectorstore:
+#      pgvector:
+#          index-type: HNSW
+#          dimensions: 1536
+#          distance-type: COSINE_DISTANCE
+#          max-document-batch-size: 10000
+
+
 server:
   port: 8123
   servlet:

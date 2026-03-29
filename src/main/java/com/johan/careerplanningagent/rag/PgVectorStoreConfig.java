@@ -1,4 +1,4 @@
-package com.johan.careerplanningagent.rag;
+/*package com.johan.careerplanningagent.rag;
 
 
 import jakarta.annotation.Resource;
@@ -16,9 +16,9 @@ import static org.springframework.ai.vectorstore.pgvector.PgVectorStore.PgDistan
 import static org.springframework.ai.vectorstore.pgvector.PgVectorStore.PgIndexType.HNSW;
 
 
-/**
+*//**
  * PG向量数据库配置
- */
+ *//*
 @Configuration
 public class PgVectorStoreConfig {
 
@@ -43,4 +43,4 @@ public class PgVectorStoreConfig {
         return vectorStore; //返回向量数据库
 
     }
-}
+}*/

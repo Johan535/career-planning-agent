@@ -1,7 +1,0 @@
-spring:
-  application:
-    name: career-planning-agent
-  profiles:
-    active: stdio
-  servlet:
-    port: 8127

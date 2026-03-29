@@ -10,11 +10,14 @@ import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import com.johan.careerplanningagent.constant.FileConstant;
 import com.itextpdf.layout.Document;
+import org.springframework.stereotype.Component;
+
 import java.io.IOException;
 
 /**
  * PDF 生成工具
  */
+
 public class PDFGenerationTool {
     @Tool(description = "Generate a PDF file with given content")
     public String generatePDF(
