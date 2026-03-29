@@ -14,6 +14,7 @@ import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Flux;
 
 import java.util.List;
 
@@ -79,6 +80,22 @@ public class CareerPlanningAgentApp {
         String text = chatResponse.getResult().getOutput().getText(); //获取结果
         log.info("text:{}",text);
         return text;
+    }
+
+    /**
+     * AI基础对话（支持多轮对话记忆,SSE流式传输，支持后续异步调用，无需等待）
+     * @param message 对话
+     * @param chatId 会话ID
+     * @return
+     */
+    public Flux<String> doChatByStream(String message, String chatId) {
+            return chatClient
+                    .prompt()
+                    .user( message)
+                    .advisors(spec -> spec.param(CHAT_MEMORY_CONVERSATION_ID_KEY, chatId) //根据会话ID进行对话记忆
+                            .param(CHAT_MEMORY_RETRIEVE_SIZE_KEY, 10)) //实现会话记忆，保存最近十条聊天记录
+                    .stream()
+                    .content();
     }
 
     //定义结构化输出格式
