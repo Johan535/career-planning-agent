@@ -1,7 +1,5 @@
 package com.johan.careerplanningagent;
 
-
-import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 

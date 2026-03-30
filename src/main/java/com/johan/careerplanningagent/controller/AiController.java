@@ -43,7 +43,7 @@ public class AiController {
      * SSE 流式调用Ai 职业规划应用
      */
     @GetMapping(value = "/career_app/chat/sse",produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<String> doChatWith(String message, String chatId){
+    public Flux<String> doChatWithSse(String message, String chatId){
         return careerPlanningAgentApp.doChatByStream(message,chatId);
     }
 
@@ -51,7 +51,7 @@ public class AiController {
      * 流式调用Manus智能体
      */
     @GetMapping("/manus/chat")
-    public SseEmitter doChatWithManus(String message, String chatId){
+    public SseEmitter doChatWithManus(String message){
         AIManus aiManus1 = new AIManus(allTools,dashscopeChatModel);
         return aiManus1.runStream(message);
     }
