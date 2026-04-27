@@ -1,6 +1,6 @@
 package com.johan.careerplanningagent.agent;
 
-import lombok.Data;
+
 import lombok.EqualsAndHashCode;
 
 @EqualsAndHashCode(callSuper = true)

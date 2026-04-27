@@ -1,5 +1,6 @@
 package com.johan.careerplanningagent.controller;
 
+import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.johan.careerplanningagent.agent.AIManus;
 import com.johan.careerplanningagent.app.CareerPlanningAgentApp;
 import com.johan.careerplanningagent.model.ApiResponse;
@@ -8,6 +9,8 @@ import com.johan.careerplanningagent.model.ChatRequest;
 import com.johan.careerplanningagent.service.ConversationService;
 import jakarta.validation.Valid;
 import jakarta.annotation.Resource;
+import org.springframework.ai.tool.ToolCallback;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.http.MediaType;
@@ -30,10 +33,15 @@ public class AiController {
     @Resource
     private CareerPlanningAgentApp careerPlanningAgentApp;
 
+    //AI调用工具能力
+    @Resource
+    private ToolCallback[] toolCallbacks;
+    @Autowired
+    private DashScopeChatModel dashscopeChatModel;
+
     /**
      * 同步调用Ai 职业规划应用
-     * @param message
-     * @param chatId
+     * @param request
      * @return
      */
     @PostMapping("/career_app/chat/sync")
@@ -55,7 +63,8 @@ public class AiController {
      */
     @GetMapping("/manus/chat")
     public SseEmitter doChatWithManus(String message){
-        return aiManus.runStream(message);
+        AIManus aiManus1 = new AIManus(toolCallbacks, dashscopeChatModel);
+        return aiManus1.runStream(message);
     }
 
     @PostMapping("/career_app/chat/rag")

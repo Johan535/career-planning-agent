@@ -10,7 +10,10 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 
@@ -34,8 +37,13 @@ public class CareerPlanningAgentApp {
     @Resource
     private ObjectProvider<Advisor> cloudRagAdvisorProvider;
 
-    //基于PgVector向量存储的RAG知识库问答功能
-    @Resource(name = "pgVectorStore")
+    // 默认向量存储（内存向量库）
+    @Resource(name = "carePlanningAgentVectorStore")
+    private VectorStore defaultVectorStore;
+
+    // 可选PgVector向量存储（按配置启用）
+    @Autowired(required = false)
+    @Qualifier("pgVectorStore")
     private VectorStore pgVectorStore;
 
     //查询重写功能
@@ -46,6 +54,8 @@ public class CareerPlanningAgentApp {
     @Resource
     private ToolCallback[] toolCallbacks;
 
+    @Value("${app.rag.use-pgvector:false}")
+    private boolean usePgVector;
 
     //通过构造函数注入来创建ChatClient的方式，目的是创建一个ChatClient对象，并设置系统提示语
     public CareerPlanningAgentApp(ChatModel dashscopeChatModel, PersistentMemoryService persistentMemoryService){
@@ -124,12 +134,13 @@ public class CareerPlanningAgentApp {
         String rewrittenMessage = queryRewriter.doQueryRewrite(
                 persistentMemoryService.buildMessageWithHistory(chatId, message, 20)); //查询重写
         Advisor cloudAdvisor = cloudRagAdvisorProvider.getIfAvailable();
+        VectorStore ragVectorStore = resolveRagVectorStore();
         ChatResponse chatResponse;
         if (cloudAdvisor != null) {
             chatResponse = chatClient
                     .prompt()
                     .user(rewrittenMessage)
-                    .advisors(new QuestionAnswerAdvisor(pgVectorStore))
+                    .advisors(new QuestionAnswerAdvisor(ragVectorStore))
                     .advisors(cloudAdvisor)
                     .call()
                     .chatResponse();
@@ -137,7 +148,7 @@ public class CareerPlanningAgentApp {
             chatResponse = chatClient
                     .prompt()
                     .user(rewrittenMessage)
-                    .advisors(new QuestionAnswerAdvisor(pgVectorStore))
+                    .advisors(new QuestionAnswerAdvisor(ragVectorStore))
                     .call()
                     .chatResponse();
         }
@@ -165,6 +176,13 @@ public class CareerPlanningAgentApp {
         persistentMemoryService.append(chatId, message, context);
         log.info("context:{}",context);
         return context;
+    }
+
+    private VectorStore resolveRagVectorStore() {
+        if (usePgVector && pgVectorStore != null) {
+            return pgVectorStore;
+        }
+        return defaultVectorStore;
     }
 
 }

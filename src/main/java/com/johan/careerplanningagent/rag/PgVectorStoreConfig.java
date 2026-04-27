@@ -9,6 +9,7 @@ import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -22,6 +23,7 @@ import static org.springframework.ai.vectorstore.pgvector.PgVectorStore.PgIndexT
 
 //PG向量数据库配置
 @Configuration
+@ConditionalOnProperty(name = "app.rag.pgvector-enabled", havingValue = "true")
 public class PgVectorStoreConfig {
     private static final Logger log = LoggerFactory.getLogger(PgVectorStoreConfig.class);
 
