@@ -22,6 +22,15 @@ class CareerPlanningAgentAppTest {
         Assertions.assertNotNull(answer);
 
     }
+
+    @Test
+    void doChatWithRag() {
+        String chatId = UUID.randomUUID().toString();
+        String message = "我想了解如何从零开始写一个完整的项目";
+        String answer = careerPlanningAgentApp.doChatWithRag(message,chatId);
+        Assertions.assertNotNull(answer);
+    }
+
     @Test
     void doChatWithTools() {
 

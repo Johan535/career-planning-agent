@@ -34,6 +34,10 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
         <!--自动接口文档-->
         <dependency>
             <groupId>com.github.xiaoymin</groupId>
@@ -47,28 +51,12 @@
             <version>1.0.0.2</version>
         </dependency>
 
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.springframework.boot</groupId>
-                    <artifactId>spring-boot-starter-logging</artifactId>
-                </exclusion>
-            </exclusions>
-            <version>3.4.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-log4j2</artifactId>
-            <version>3.4.0</version>
-        </dependency>
-<!--        &lt;!&ndash;pgvector-自动整合向量数据库&ndash;&gt;
+        <!--pgvector-自动整合向量数据库-->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-vector-store-pgvector</artifactId>
             <version>1.0.0-M7</version>
-        </dependency>-->
+        </dependency>
         <!--pgvector-手动整合向量数据库-->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -118,7 +106,8 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version> 1.18.36</version>
+            <version>1.18.36</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

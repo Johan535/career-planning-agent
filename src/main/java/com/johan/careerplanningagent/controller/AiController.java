@@ -2,9 +2,14 @@ package com.johan.careerplanningagent.controller;
 
 import com.johan.careerplanningagent.agent.AIManus;
 import com.johan.careerplanningagent.app.CareerPlanningAgentApp;
+import com.johan.careerplanningagent.model.ApiResponse;
+import com.johan.careerplanningagent.model.ChatReply;
+import com.johan.careerplanningagent.model.ChatRequest;
+import com.johan.careerplanningagent.service.ConversationService;
+import jakarta.validation.Valid;
 import jakarta.annotation.Resource;
-import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.ai.tool.ToolCallback;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,16 +22,13 @@ import reactor.core.publisher.Flux;
 public class AiController {
 
     @Resource
-    private CareerPlanningAgentApp careerPlanningAgentApp;
+    private ConversationService conversationService;
 
     @Resource
     private AIManus aiManus;
 
     @Resource
-    private ChatModel  dashscopeChatModel;
-
-    @Resource
-    private ToolCallback[] allTools;
+    private CareerPlanningAgentApp careerPlanningAgentApp;
 
     /**
      * 同步调用Ai 职业规划应用
@@ -34,17 +36,18 @@ public class AiController {
      * @param chatId
      * @return
      */
-    @GetMapping("/career_app/chat/sync")
-    public String chat(String message,String chatId) {
-        return careerPlanningAgentApp.chat(message,chatId);
+    @PostMapping("/career_app/chat/sync")
+    public ApiResponse<ChatReply> chat(@Valid @RequestBody ChatRequest request) {
+        ChatReply reply = conversationService.chat(request.message(), request.chatId());
+        return ApiResponse.success(reply);
     }
 
     /**
      * SSE 流式调用Ai 职业规划应用
      */
-    @GetMapping(value = "/career_app/chat/sse",produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<String> doChatWithSse(String message, String chatId){
-        return careerPlanningAgentApp.doChatByStream(message,chatId);
+    @PostMapping(value = "/career_app/chat/sse",produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<String> doChatWithSse(@Valid @RequestBody ChatRequest request){
+        return conversationService.chatStream(request.message(), request.chatId());
     }
 
     /**
@@ -52,7 +55,20 @@ public class AiController {
      */
     @GetMapping("/manus/chat")
     public SseEmitter doChatWithManus(String message){
-        AIManus aiManus1 = new AIManus(allTools,dashscopeChatModel);
-        return aiManus1.runStream(message);
+        return aiManus.runStream(message);
+    }
+
+    @PostMapping("/career_app/chat/rag")
+    public ApiResponse<ChatReply> chatWithRag(@Valid @RequestBody ChatRequest request) {
+        String chatId = conversationService.ensureChatId(request.chatId());
+        String ragReply = careerPlanningAgentApp.doChatWithRag(request.message(), chatId);
+        return ApiResponse.success(new ChatReply(chatId, ragReply));
+    }
+
+    @PostMapping("/career_app/chat/tool")
+    public ApiResponse<ChatReply> chatWithTool(@Valid @RequestBody ChatRequest request) {
+        String chatId = conversationService.ensureChatId(request.chatId());
+        String toolReply = careerPlanningAgentApp.doChatWithTool(request.message(), chatId);
+        return ApiResponse.success(new ChatReply(chatId, toolReply));
     }
 }

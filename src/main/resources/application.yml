@@ -3,21 +3,32 @@ spring:
     name: career-planning-agent
   ai:
     dashscope:
-      api-key: sk-40ea760a6207445da466fa1b7fc0bf62
+      api-key: sk-206d8cbf57924a53b43500f874cc3a3d
+      chat:
+        options:
+          timeout: 120s
+      embedding:
+        options:
+          timeout: 180s
+      connection:
+        timeout: 60s
+        read-timeout: 180s
     mcp:
       client:
         enabled: false
 
   datasource:
-      url: jdbc:postgresql://pgm-uf6tq00m299ay556po.pg.rds.aliyuncs.com/career-planning-agent
+      url: jdbc:postgresql://rm-cn-x684rbtcx0002lco.rwlb.rds.aliyuncs.com:5432/career_ai_agent
       username: my_user
-      password: qazwsxedc123A!
-#  vectorstore:
-#      pgvector:
-#          index-type: HNSW
-#          dimensions: 1536
-#          distance-type: COSINE_DISTANCE
-#          max-document-batch-size: 10000
+      password: "@qazwsxedc123A"
+
+
+  vectorstore:
+      pgvector:
+          index-type: HNSW
+          dimensions: 1536
+          distance-type: COSINE_DISTANCE
+          max-document-batch-size: 10000
 
 
 server:
@@ -36,7 +47,7 @@ springdoc:
   group-configs:
     - group: 'default'
       paths-to-match: '/**'
-      packages-to-scan: com.johan\careerplanningagent\controller
+      packages-to-scan: com.johan.careerplanningagent.controller
 
 
 # knife4j
@@ -48,4 +59,11 @@ knife4j:
 
 #searchAPI
 search-api:
-  api-key: MGVjC98b1X19bPfMuGVx6PwH
+  api-key: ${SEARCH_API_KEY:}
+
+app:
+  security:
+    enabled: false
+    api-key: ${APP_API_KEY:}
+  rag:
+    cloud-enabled: false
