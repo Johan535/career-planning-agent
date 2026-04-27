@@ -9,7 +9,9 @@ import org.springframework.ai.embedding.Embedding;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -46,14 +48,45 @@ public class CarePlanningAgentVectorStoreConfig {
             log.warn("未配置有效 DashScope API Key，向量庫將以空庫模式啟動");
             return simpleVectorStore;
         }
-        List<Document> documents = carePlanningAgentDocumentLoader.loadMarkDowns(); // 加载文档
-        //基于AI的自主增强(自动补充关键词元信息)
-        List<Document> enrichDocuments = myKeywordEnricher.enrichDocuments(documents); // 添加关键词
-        try {
-            simpleVectorStore.add(enrichDocuments); // 添加文档
-        } catch (Exception ex) {
-            log.warn("向量庫初始化失敗，回退為空庫: {}", ex.getMessage());
-        }
+        
+        // 不在启动时加载文档，改为异步加载
+        log.info("向量库Bean创建完成，文档将在应用启动后异步加载");
         return simpleVectorStore; // 返回向量数据库
+    }
+    
+    /**
+     * 应用启动后异步加载文档到向量库
+     * 这样可以避免在启动过程中因网络请求被中断而导致失败
+     */
+    @Bean
+    public ApplicationRunner loadDocumentsAsync(@Qualifier("carePlanningAgentVectorStore") VectorStore vectorStore) {
+        return args -> {
+            if (!StringUtils.hasText(dashscopeApiKey) || "test-key".equals(dashscopeApiKey)) {
+                log.warn("未配置有效 DashScope API Key，跳过文档加载");
+                return;
+            }
+            
+            try {
+                log.info("开始异步加载文档到向量库...");
+                List<Document> documents = carePlanningAgentDocumentLoader.loadMarkDowns();
+                
+                if (documents == null || documents.isEmpty()) {
+                    log.warn("未加载到任何文档");
+                    return;
+                }
+                
+                log.info("成功加载 {} 个文档，开始进行关键词增强...", documents.size());
+                List<Document> enrichDocuments = myKeywordEnricher.enrichDocuments(documents);
+                
+                if (enrichDocuments != null && !enrichDocuments.isEmpty()) {
+                    log.info("开始将 {} 个文档添加到向量库...", enrichDocuments.size());
+                    vectorStore.add(enrichDocuments);
+                    log.info("✅ 向量库文档加载完成！");
+                }
+            } catch (Exception ex) {
+                log.warn("⚠️ 向量库文档加载失败，但不影响应用运行: {}", ex.getMessage());
+                log.debug("详细错误信息: ", ex);
+            }
+        };
     }
 }

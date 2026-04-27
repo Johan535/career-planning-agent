@@ -6,13 +6,19 @@ spring:
       api-key: sk-206d8cbf57924a53b43500f874cc3a3d
       chat:
         options:
-          timeout: 120s
+          timeout: 300s  # 增加到5分钟
       embedding:
         options:
-          timeout: 180s
+          timeout: 300s  # 增加到5分钟
       connection:
-        timeout: 60s
-        read-timeout: 180s
+        timeout: 120s    # 连接超时2分钟
+        read-timeout: 300s  # 读取超时5分钟
+    retry:
+      max-attempts: 5     # 最大重试5次
+      backoff:
+        initial-interval: 2000  # 初始间隔2秒
+        max-interval: 10000     # 最大间隔10秒
+        multiplier: 2           # 间隔倍数
     mcp:
       client:
         enabled: false
