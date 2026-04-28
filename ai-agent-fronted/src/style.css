@@ -5,6 +5,12 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  --n-cyan: rgba(30, 240, 255, 1);
+  --n-violet: rgba(170, 80, 255, 1);
+  --n-mint: rgba(35, 255, 200, 1);
+  --n-pink: rgba(255, 60, 220, 1);
+  --glass: rgba(10, 12, 22, 0.58);
+  --glass2: rgba(6, 7, 16, 0.82);
 }
 
 html,
@@ -29,6 +35,25 @@ button {
 
 #app {
   min-height: 100svh;
+}
+
+/* 全局交互强化：通用 3D 上浮 + 发光阴影扩散 */
+.fx-lift {
+  transform-style: preserve-3d;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    filter 0.18s ease;
+}
+.fx-lift:hover {
+  transform: translateY(-6px) perspective(1000px) rotateX(3deg);
+  filter: saturate(1.06) brightness(1.05);
+  box-shadow:
+    0 26px 90px rgba(0, 0, 0, 0.58),
+    0 0 60px rgba(30, 240, 255, 0.16);
+}
+.fx-lift:active {
+  transform: translateY(-2px) perspective(1000px) rotateX(2deg) scale(0.992);
 }
 
 @media (prefers-reduced-motion: reduce) {
