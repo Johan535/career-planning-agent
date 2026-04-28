@@ -1,12 +1,14 @@
 spring:
   application :
     name: career-planning-agent
+  config:
+    import: optional:classpath:application-local.yml
   sql:
     init:
       mode: never
   ai:
     dashscope:
-      api-key: ${DASHSCOPE_API_KEY:test-key}
+      api-key: ${DASHSCOPE_API_KEY:}
       chat:
         options:
           timeout: 300s  # 增加到5分钟

@@ -34,3 +34,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Local secrets (DO NOT COMMIT) ###
+src/main/resources/application-local.yml
