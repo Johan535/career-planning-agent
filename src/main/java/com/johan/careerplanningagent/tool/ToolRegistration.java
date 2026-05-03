@@ -18,8 +18,7 @@ public class ToolRegistration {
 
     // 注册工具
     @Bean
-    public ToolCallback[] allTools(PDFGenerationTool pdfGenerationTool) {
-        FileOperationTool fileOperationTool = new FileOperationTool();
+    public ToolCallback[] allTools(PDFGenerationTool pdfGenerationTool, FileOperationTool fileOperationTool) {
         WebSearchTool webSearchTool = new WebSearchTool(searchApiKey);
         WebScrapingTool webScrapingTool = new WebScrapingTool();
         ResourceDownLoadTool resourceDownloadTool = new ResourceDownLoadTool();

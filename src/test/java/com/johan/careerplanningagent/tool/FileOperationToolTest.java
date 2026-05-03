@@ -1,28 +1,30 @@
 package com.johan.careerplanningagent.tool;
 
+import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 @SpringBootTest
 class FileOperationToolTest {
 
+    @Resource
+    private FileOperationTool fileOperationTool;
+
     @Test
     void readFile() {
-        FileOperationTool fileOperationTool = new FileOperationTool();
         String fileName = "test.txt";
         String result = fileOperationTool.readFile(fileName);
-        Assertions.assertNotNull( result);
+        Assertions.assertNotNull(result);
     }
 
     @Test
     void writeFile() {
-        FileOperationTool fileOperationTool = new FileOperationTool();
         String fileName = "test.txt";
         String content = "Hello, World!";
         String result = fileOperationTool.writeFile(fileName, content);
-        Assertions.assertNotNull("文件写入成功", result);
+        Assertions.assertNotNull(result);
+        Assertions.assertTrue(result.contains("fileId="), result);
+        Assertions.assertTrue(result.contains("成功") || result.contains("写入"), result);
     }
 }

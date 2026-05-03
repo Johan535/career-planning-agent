@@ -68,7 +68,7 @@ public class PDFGenerationTool {
             String owner = ManusSseContext.currentSessionKey();
             String fileId = generatedFileStore.register(absolute, owner, safeBase);
             ManusSseContext.sendArtifact(fileId, safeBase);
-            return "PDF 已生成，fileId=" + fileId + "，展示文件名=" + safeBase + "。请提示用户可在页面点击「下载 PDF」保存到本地。";
+            return "PDF 已生成，fileId=" + fileId + "，展示文件名=" + safeBase + "。请提示用户可在页面「生成文件」区域点击「下载到本地」保存。";
         } catch (IOException e) {
             return "Error generating PDF: " + e.getMessage();
         }

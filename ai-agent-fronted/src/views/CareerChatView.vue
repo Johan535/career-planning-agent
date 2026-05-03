@@ -59,6 +59,11 @@ async function send() {
   const text = input.value.trim()
   if (!text || sending.value) return
 
+  // 后端用 chatId 关联 chat-memory；若为空每次会当成新会话，导致「记不住上文」
+  if (!chatId.value || !String(chatId.value).trim()) {
+    chatId.value = createChatId()
+  }
+
   hasChatted.value = true
   sending.value = true
   input.value = ''

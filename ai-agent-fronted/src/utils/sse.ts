@@ -169,15 +169,16 @@ export function openManusChatSse(url: string, handlers: ManusChatSseHandlers = {
   return { close, raw: es }
 }
 
-export type DownloadPdfParams = {
+export type DownloadGeneratedFileParams = {
   baseUrl: string
   fileId: string
   chatId: string
   apiKey?: string
 }
 
-export async function downloadPdfBlob(params: DownloadPdfParams): Promise<Blob> {
-  const u = new URL(`${params.baseUrl.replace(/\/$/, '')}/ai/files/pdf/download`)
+/** 下载工具注册的可生成文件（PDF、Markdown、文本等） */
+export async function downloadGeneratedFileBlob(params: DownloadGeneratedFileParams): Promise<Blob> {
+  const u = new URL(`${params.baseUrl.replace(/\/$/, '')}/ai/files/download`)
   u.searchParams.set('fileId', params.fileId)
   u.searchParams.set('chatId', params.chatId)
   if (params.apiKey && params.apiKey.length > 0) {
@@ -200,6 +201,14 @@ export async function downloadPdfBlob(params: DownloadPdfParams): Promise<Blob> 
     throw new Error(detail)
   }
   return res.blob()
+}
+
+/** @deprecated 使用 {@link downloadGeneratedFileBlob} */
+export type DownloadPdfParams = DownloadGeneratedFileParams
+
+/** @deprecated 使用 {@link downloadGeneratedFileBlob} */
+export async function downloadPdfBlob(params: DownloadPdfParams): Promise<Blob> {
+  return downloadGeneratedFileBlob(params)
 }
 
 export function triggerBlobDownload(blob: Blob, filename: string) {

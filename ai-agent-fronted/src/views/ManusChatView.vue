@@ -6,7 +6,7 @@ import { createChatId } from '../utils/id'
 import {
   createSseGetUrl,
   createTypewriter,
-  downloadPdfBlob,
+  downloadGeneratedFileBlob,
   openManusChatSse,
   triggerBlobDownload,
   type ManusArtifact,
@@ -175,7 +175,7 @@ async function downloadArtifact(art: ManusArtifact) {
   downloadError.value = null
   downloadingId.value = art.fileId
   try {
-    const blob = await downloadPdfBlob({
+    const blob = await downloadGeneratedFileBlob({
       baseUrl: API_BASE,
       fileId: art.fileId,
       chatId: chatId.value,
