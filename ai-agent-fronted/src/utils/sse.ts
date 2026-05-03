@@ -1,6 +1,8 @@
 ﻿export type TypewriterController = {
   push: (text: string) => void
   stop: () => void
+  /** 取出队列中尚未展示的文字（不触发逐字回调），用于切换步骤气泡时收尾 */
+  flush: () => string
 }
 
 export function createSseGetUrl(url: string, params: Record<string, string | number | null | undefined>) {
@@ -43,6 +45,15 @@ export function createTypewriter(onText: (text: string) => void, delay = 22, onI
       const normalized = text.replace(/\\n/g, '\n').replace(/<br\s*\/?>/gi, '\n')
       queue.push(...Array.from(normalized))
       start()
+    },
+    flush(): string {
+      if (timer !== null) {
+        window.clearTimeout(timer)
+        timer = null
+      }
+      const s = queue.join('')
+      queue.length = 0
+      return s
     },
     stop() {
       stopped = true
@@ -88,10 +99,12 @@ export function openEventSourceText(url: string, opts: EventSourceSseOptions = {
     close()
   })
 
+  // EventSource 在连接正常结束时常触发 error + CLOSED，不宜一律当作业务错误
   es.onerror = (ev) => {
     if (closed) return
-    opts.onError?.(ev)
-    // 阻止浏览器对 EventSource 自动重连导致重复/错乱
+    if (es.readyState === EventSource.CONNECTING) {
+      opts.onError?.(ev)
+    }
     close()
   }
 

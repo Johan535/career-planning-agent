@@ -118,14 +118,11 @@ async function send() {
         pendingChars += Array.from(normalized).length
         writer.push(normalized)
       },
-      onError: () => {
-        handle.close()
+      onClose: () => {
+        streamClosed = true
         if (!aiMsg.content && pendingChars === 0) {
           aiMsg.content = '连接异常：请确认后端已启动（8123 端口）、接口可访问，并已配置正确的 API 地址与跨域。'
         }
-      },
-      onClose: () => {
-        streamClosed = true
         finishIfDone()
       },
     })

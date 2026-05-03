@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
+import { API_BASE, OPTIONAL_API_KEY } from '../config/api'
 import { createChatId } from '../utils/id'
 import { createSseGetUrl, createTypewriter, openEventSourceText, type TypewriterController } from '../utils/sse'
 
@@ -18,7 +19,7 @@ const sending = ref(false)
 const messages = ref<ChatMsg[]>([])
 const scrollerRef = ref<HTMLElement | null>(null)
 const esCloser = ref<null | (() => void)>(null)
-const typewriter = ref<TypewriterController | null>(null)
+const stepTypewriter = ref<TypewriterController | null>(null)
 const hasChatted = ref(false)
 const sentFlash = ref(false)
 
@@ -69,83 +70,102 @@ async function send() {
   }
   messages.value.push(userMsg)
 
-  const aiMsg: ChatMsg = {
-    id: `${Date.now()}-a`,
-    role: 'ai',
-    content: '',
-    streaming: true,
-  }
-  messages.value.push(aiMsg)
-
+  // 智能体：后端每个 SSE message 对应一步，每步单独一个气泡（职业规划师页仍为单气泡，勿改 CareerChatView）
   await nextTick()
   scrollToBottom(false)
 
-  // 关闭上一次连接，避免并发
   esCloser.value?.()
   esCloser.value = null
-  typewriter.value?.stop()
+  stepTypewriter.value?.stop()
+  stepTypewriter.value = null
 
-  try {
-    const base = 'http://localhost:8123/api'
-    const url = createSseGetUrl(`${base}/ai/manus/chat`, { message: text })
-    let streamClosed = false
-    let pendingChars = 0
-    const finishIfDone = () => {
-      if (!streamClosed || pendingChars > 0) return
-      if (typewriter.value === writer) typewriter.value = null
-      aiMsg.streaming = false
-      sending.value = false
-      sentFlash.value = true
-      window.setTimeout(() => (sentFlash.value = false), 520)
-      void nextTick().then(() => scrollToBottom(true))
+  let currentAiBubble: ChatMsg | null = null
+  let stepSeq = 0
+
+  const finalizePreviousStep = () => {
+    const w = stepTypewriter.value
+    if (w) {
+      const tail = w.flush()
+      if (currentAiBubble && tail) currentAiBubble.content += tail
+      w.stop()
+      stepTypewriter.value = null
     }
-    const writer = createTypewriter((char) => {
-      aiMsg.content += char
-      pendingChars = Math.max(0, pendingChars - 1)
-      scrollToBottom(true)
-      finishIfDone()
-    })
-    typewriter.value = writer
-
-    const handle = openEventSourceText(url, {
-      onText: (delta) => {
-        const normalized = normalizeDelta(delta)
-        pendingChars += Array.from(normalized).length
-        writer.push(normalized)
-      },
-      onError: () => {
-        // 这里默认不让它无限重连，直接关闭并给出提示
-        handle.close()
-        if (!aiMsg.content && pendingChars === 0) {
-          aiMsg.content = '连接异常：请确认后端已启动（8123端口）且接口可访问。'
-        }
-      },
-      onClose: () => {
-        streamClosed = true
-        finishIfDone()
-      },
-    })
-
-    esCloser.value = () => handle.close()
-  } catch (e) {
-    typewriter.value?.stop()
-    typewriter.value = null
-    aiMsg.streaming = false
-    aiMsg.content =
-      aiMsg.content ||
-      `请求失败：${e instanceof Error ? e.message : '未知错误'}。请确认后端已启动（8123端口）并允许跨域。`
-    sending.value = false
+    if (currentAiBubble) currentAiBubble.streaming = false
   }
+
+  const beginNewStepBubble = (rawStepText: string) => {
+    finalizePreviousStep()
+    const normalized = normalizeDelta(rawStepText)
+    stepSeq += 1
+    const bubble = reactive<ChatMsg>({
+      id: `${Date.now()}-s${stepSeq}-a`,
+      role: 'ai',
+      content: '',
+      streaming: true,
+    })
+    messages.value.push(bubble)
+    currentAiBubble = bubble
+    void nextTick().then(() => scrollToBottom(false))
+
+    const writer = createTypewriter((char) => {
+      bubble.content += char
+      void nextTick(() => scrollToBottom(false))
+    })
+    stepTypewriter.value = writer
+    writer.push(normalized)
+  }
+
+  const endStreamUi = () => {
+    finalizePreviousStep()
+    currentAiBubble = null
+    sending.value = false
+    sentFlash.value = true
+    window.setTimeout(() => (sentFlash.value = false), 520)
+    void nextTick().then(() => scrollToBottom(true))
+  }
+
+  const params: Record<string, string | number | null | undefined> = { message: text, chatId: chatId.value }
+  if (OPTIONAL_API_KEY) params.apiKey = OPTIONAL_API_KEY
+  const url = createSseGetUrl(`${API_BASE}/ai/manus/chat`, params)
+
+  const handle = openEventSourceText(url, {
+    onText: (delta) => {
+      beginNewStepBubble(delta)
+    },
+    onError: () => {
+      if (stepSeq === 0) {
+        const errBubble = reactive<ChatMsg>({
+          id: `${Date.now()}-err-a`,
+          role: 'ai',
+          content: '连接异常：请确认后端已启动（8123 端口）、接口可访问，并已配置正确的 API 地址与跨域。',
+          streaming: false,
+        })
+        messages.value.push(errBubble)
+      }
+    },
+    onClose: () => {
+      endStreamUi()
+    },
+  })
+
+  esCloser.value = () => handle.close()
 }
 
 function stop() {
   esCloser.value?.()
   esCloser.value = null
-  typewriter.value?.stop()
-  typewriter.value = null
+  const w = stepTypewriter.value
+  if (w) {
+    const tail = w.flush()
+    const last = [...messages.value].reverse().find((m) => m.role === 'ai' && m.streaming)
+    if (last && tail) last.content += tail
+    w.stop()
+    stepTypewriter.value = null
+  }
+  for (const m of messages.value) {
+    if (m.role === 'ai' && m.streaming) m.streaming = false
+  }
   sending.value = false
-  const last = [...messages.value].reverse().find((m) => m.role === 'ai' && m.streaming)
-  if (last) last.streaming = false
 }
 
 onMounted(() => {
