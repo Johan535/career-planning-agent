@@ -2,7 +2,7 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { createChatId } from '../utils/id'
-import { postSseText } from '../utils/sse'
+import { createSseGetUrl, createTypewriter, openEventSourceText, type TypewriterController } from '../utils/sse'
 
 type Role = 'user' | 'ai'
 type ChatMsg = {
@@ -17,11 +17,36 @@ const input = ref('')
 const sending = ref(false)
 const messages = ref<ChatMsg[]>([])
 const scrollerRef = ref<HTMLElement | null>(null)
-const aborter = ref<AbortController | null>(null)
+const esCloser = ref<null | (() => void)>(null)
+const typewriter = ref<TypewriterController | null>(null)
 const hasChatted = ref(false)
 const sentFlash = ref(false)
 
 const canSend = computed(() => !sending.value && input.value.trim().length > 0)
+
+function normalizeDelta(text: string) {
+  return text.replace(/\\n/g, '\n').replace(/<br\s*\/?>/gi, '\n')
+}
+
+function escapeHtml(text: string) {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+function renderContent(content: string) {
+  return escapeHtml(normalizeDelta(content))
+    .replace(/^###\s+(.+)$/gm, '<h3>$1</h3>')
+    .replace(/^##\s+(.+)$/gm, '<h2>$1</h2>')
+    .replace(/^#\s+(.+)$/gm, '<h1>$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/^[-*]\s+(.+)$/gm, '<li>$1</li>')
+    .replace(/\n/g, '<br>')
+}
 
 function scrollToBottom(smooth = true) {
   const el = scrollerRef.value
@@ -55,41 +80,70 @@ async function send() {
   await nextTick()
   scrollToBottom(false)
 
-  aborter.value?.abort()
-  aborter.value = new AbortController()
+  esCloser.value?.()
+  esCloser.value = null
+  typewriter.value?.stop()
 
   try {
     const base = 'http://localhost:8123/api'
-    await postSseText(
-      `${base}/ai/career_app/chat/sse`,
-      { message: text, chatId: chatId.value },
-      {
-        signal: aborter.value.signal,
-        onText: (delta) => {
-          aiMsg.content += delta
-          // 打字机感：每个 chunk 来的时候轻微滚动跟随
-          scrollToBottom(true)
-        },
+    const url = createSseGetUrl(`${base}/ai/career_app/chat/sse`, {
+      message: text,
+      chatId: chatId.value,
+    })
+    let streamClosed = false
+    let pendingChars = 0
+    const finishIfDone = () => {
+      if (!streamClosed || pendingChars > 0) return
+      if (typewriter.value === writer) typewriter.value = null
+      aiMsg.streaming = false
+      sending.value = false
+      sentFlash.value = true
+      window.setTimeout(() => (sentFlash.value = false), 520)
+      void nextTick().then(() => scrollToBottom(true))
+    }
+    const writer = createTypewriter((char) => {
+      aiMsg.content += char
+      pendingChars = Math.max(0, pendingChars - 1)
+      scrollToBottom(true)
+      finishIfDone()
+    })
+    typewriter.value = writer
+
+    const handle = openEventSourceText(url, {
+      onText: (delta) => {
+        const normalized = normalizeDelta(delta)
+        pendingChars += Array.from(normalized).length
+        writer.push(normalized)
       },
-    )
+      onError: () => {
+        handle.close()
+        if (!aiMsg.content && pendingChars === 0) {
+          aiMsg.content = '连接异常：请确认后端已启动（8123端口）且接口可访问。'
+        }
+      },
+      onClose: () => {
+        streamClosed = true
+        finishIfDone()
+      },
+    })
+
+    esCloser.value = () => handle.close()
   } catch (e) {
+    typewriter.value?.stop()
+    typewriter.value = null
     aiMsg.streaming = false
     aiMsg.content =
       aiMsg.content ||
       `请求失败：${e instanceof Error ? e.message : '未知错误'}。请确认后端已启动（8123端口）并允许跨域。`
-  } finally {
-    aiMsg.streaming = false
     sending.value = false
-    sentFlash.value = true
-    window.setTimeout(() => (sentFlash.value = false), 520)
-    await nextTick()
-    scrollToBottom(true)
   }
 }
 
 function stop() {
-  aborter.value?.abort()
-  aborter.value = null
+  esCloser.value?.()
+  esCloser.value = null
+  typewriter.value?.stop()
+  typewriter.value = null
   sending.value = false
   const last = [...messages.value].reverse().find((m) => m.role === 'ai' && m.streaming)
   if (last) last.streaming = false
@@ -147,7 +201,7 @@ watch(
           </div>
           <div v-for="m in messages" :key="m.id" class="row" :class="m.role">
             <div class="bubble" :class="{ streaming: m.streaming }">
-              <div class="txt">{{ m.content }}</div>
+              <div class="txt" v-html="renderContent(m.content)"></div>
               <div v-if="m.role === 'ai' && m.streaming" class="caret" aria-hidden="true"></div>
             </div>
           </div>

@@ -13,22 +13,22 @@ public class AIManus extends ToolCallAgent {
     public AIManus(ToolCallback[] allTools, ChatModel dashscopeChatModel) {
         super(allTools);
         this.setName("xiaogaManus");
-        String SYSTEM_PROMPT = """  
-                You are YuManus, an all-capable AI assistant, aimed at solving any task presented by the user.  
-                You have various tools at your disposal that you can call upon to efficiently complete complex requests.  
+        String systemPrompt = """
+                You are YuManus, an all-capable AI assistant, aimed at solving any task presented by the user.
+                You have various tools at your disposal that you can call upon to efficiently complete complex requests.
+                When external tools fail or return insufficient data, continue solving the user's task using your own knowledge.
+                Always provide a clear, structured final answer in Chinese unless the user asks otherwise.
                 """;
-        this.setSystemPrompt(SYSTEM_PROMPT);
-        String NEXT_STEP_PROMPT = """  
-                Based on user needs, proactively select the most appropriate tool or combination of tools.  
-                For complex tasks, you can break down the problem and use different tools step by step to solve it.  
-                After using each tool, clearly explain the execution results and suggest the next steps.  
-                If you want to stop the interaction at any point, use the `terminate` tool/function call.  
+        String nextStepPrompt = """
+                Based on user needs, proactively select the most appropriate tool or combination of tools.
+                For complex tasks, break down the problem and use different tools step by step only when tools are truly useful.
+                After using each tool, clearly explain the execution results and continue producing a useful answer.
+                If you want to stop the interaction at any point, use the `terminate` tool/function call.
                 """;
-        this.setSystemPrompt(NEXT_STEP_PROMPT);
-        this.setMaxSteps(2);
+        this.setSystemPrompt(systemPrompt + "\n" + nextStepPrompt);
+        this.setMaxSteps(3);
 
-        ChatClient chatClient = ChatClient.builder(dashscopeChatModel)
-                .build();
+        ChatClient chatClient = ChatClient.builder(dashscopeChatModel).build();
         this.setChatClient(chatClient);
     }
 }
