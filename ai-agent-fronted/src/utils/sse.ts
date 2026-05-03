@@ -89,7 +89,10 @@ export function openEventSourceText(url: string, opts: EventSourceSseOptions = {
   })
 
   es.onerror = (ev) => {
-    if (!closed) opts.onError?.(ev)
+    if (closed) return
+    opts.onError?.(ev)
+    // 阻止浏览器对 EventSource 自动重连导致重复/错乱
+    close()
   }
 
   return {

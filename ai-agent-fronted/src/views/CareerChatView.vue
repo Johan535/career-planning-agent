@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
+import { API_BASE, OPTIONAL_API_KEY } from '../config/api'
 import { createChatId } from '../utils/id'
 import { createSseGetUrl, createTypewriter, openEventSourceText, type TypewriterController } from '../utils/sse'
 
@@ -69,12 +70,13 @@ async function send() {
   }
   messages.value.push(userMsg)
 
-  const aiMsg: ChatMsg = {
+  // 必须用 reactive：push 进数组后 Vue 会代理数组内对象，局部普通对象引用上的 content 增量可能不会触发渲染，表现为气泡空白、结束时一次性出现
+  const aiMsg = reactive<ChatMsg>({
     id: `${Date.now()}-a`,
     role: 'ai',
     content: '',
     streaming: true,
-  }
+  })
   messages.value.push(aiMsg)
 
   await nextTick()
@@ -85,11 +87,12 @@ async function send() {
   typewriter.value?.stop()
 
   try {
-    const base = 'http://localhost:8123/api'
-    const url = createSseGetUrl(`${base}/ai/career_app/chat/sse`, {
+    const careerParams: Record<string, string | number | null | undefined> = {
       message: text,
       chatId: chatId.value,
-    })
+    }
+    if (OPTIONAL_API_KEY) careerParams.apiKey = OPTIONAL_API_KEY
+    const url = createSseGetUrl(`${API_BASE}/ai/career_app/chat/sse`, careerParams)
     let streamClosed = false
     let pendingChars = 0
     const finishIfDone = () => {
@@ -104,7 +107,7 @@ async function send() {
     const writer = createTypewriter((char) => {
       aiMsg.content += char
       pendingChars = Math.max(0, pendingChars - 1)
-      scrollToBottom(true)
+      void nextTick(() => scrollToBottom(false))
       finishIfDone()
     })
     typewriter.value = writer
@@ -118,7 +121,7 @@ async function send() {
       onError: () => {
         handle.close()
         if (!aiMsg.content && pendingChars === 0) {
-          aiMsg.content = '连接异常：请确认后端已启动（8123端口）且接口可访问。'
+          aiMsg.content = '连接异常：请确认后端已启动（8123 端口）、接口可访问，并已配置正确的 API 地址与跨域。'
         }
       },
       onClose: () => {
@@ -134,7 +137,7 @@ async function send() {
     aiMsg.streaming = false
     aiMsg.content =
       aiMsg.content ||
-      `请求失败：${e instanceof Error ? e.message : '未知错误'}。请确认后端已启动（8123端口）并允许跨域。`
+      `请求失败：${e instanceof Error ? e.message : '未知错误'}。请确认后端已启动（8123 端口）并允许跨域。`
     sending.value = false
   }
 }
