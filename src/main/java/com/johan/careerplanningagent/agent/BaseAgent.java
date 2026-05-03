@@ -3,15 +3,14 @@ package com.johan.careerplanningagent.agent;
 
 import com.itextpdf.styledxmlparser.jsoup.internal.StringUtil;
 import com.johan.careerplanningagent.agent.model.AgentState;
-import com.johan.careerplanningagent.app.CareerPlanningAgentApp;
-import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
+import com.johan.careerplanningagent.manus.ManusSseContext;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -156,31 +155,44 @@ public abstract class BaseAgent {
 
 
     /**
-     *运行代理（流式输出）
-     * @param userPrompt 用户提示词
-     * @return 执行结果
+     * 运行代理（流式输出），默认匿名会话。
      */
     public SseEmitter runStream(String userPrompt) {
+        return runStream(userPrompt, "anonymous");
+    }
+
+    /**
+     * 运行代理（流式输出）。
+     *
+     * @param sessionKey 与前端 chatId 对齐，供工具注册下载归属（如 PDF）。
+     */
+    public SseEmitter runStream(String userPrompt, String sessionKey) {
 
         SseEmitter emitter = new SseEmitter(300000L);
-
 
         CompletableFuture.runAsync(() -> {
             try {
                 if (this.state != AgentState.IDLE) {
-                    emitter.send("错误：无法从状态运行代理: " + this.state);
+                    try {
+                        emitter.send("错误：无法从状态运行代理: " + this.state);
+                    } catch (IOException ignored) {
+                        // ignore
+                    }
                     emitter.complete();
                     return;
                 }
                 if (StringUtil.isBlank(userPrompt)) {
-                    emitter.send("错误：不能使用空提示词运行代理");
+                    try {
+                        emitter.send("错误：不能使用空提示词运行代理");
+                    } catch (IOException ignored) {
+                        // ignore
+                    }
                     emitter.complete();
                     return;
                 }
 
-
+                ManusSseContext.open(sessionKey, emitter);
                 state = AgentState.RUNNING;
-
                 messageList.add(new UserMessage(userPrompt));
 
                 try {
@@ -189,17 +201,22 @@ public abstract class BaseAgent {
                         currentStep = stepNumber;
                         log.info("Executing step " + stepNumber + "/" + maxSteps);
 
-
                         String stepResult = step();
                         String result = "Step " + stepNumber + ": " + stepResult;
-
-
-                        emitter.send(result);
+                        try {
+                            emitter.send(result);
+                        } catch (IOException io) {
+                            throw new RuntimeException(io);
+                        }
                     }
 
                     if (currentStep >= maxSteps) {
                         state = AgentState.FINISHED;
-                        emitter.send("执行结束: 达到最大步骤 (" + maxSteps + ")");
+                        try {
+                            emitter.send("执行结束: 达到最大步骤 (" + maxSteps + ")");
+                        } catch (IOException io) {
+                            throw new RuntimeException(io);
+                        }
                     }
 
                     emitter.complete();
@@ -207,13 +224,16 @@ public abstract class BaseAgent {
                     state = AgentState.ERROR;
                     log.error("执行智能体失败", e);
                     try {
-                        emitter.send("执行错误: " + e.getMessage());
+                        try {
+                            emitter.send("执行错误: " + e.getMessage());
+                        } catch (IOException io) {
+                            log.debug("SSE send after error: {}", io.toString());
+                        }
                         emitter.complete();
                     } catch (Exception ex) {
                         emitter.completeWithError(ex);
                     }
                 } finally {
-
                     this.cleanup();
                 }
             } catch (Exception e) {
@@ -244,6 +264,6 @@ public abstract class BaseAgent {
 
     //清理资源
     protected void cleanup() {
-
+        ManusSseContext.clear();
     }
 }

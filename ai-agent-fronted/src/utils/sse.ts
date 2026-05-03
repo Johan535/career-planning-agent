@@ -113,3 +113,103 @@ export function openEventSourceText(url: string, opts: EventSourceSseOptions = {
     raw: es,
   }
 }
+
+export type ManusArtifact = {
+  fileId: string
+  filename: string
+}
+
+export type ManusChatSseHandlers = {
+  /** 每步正文（默认 SSE message） */
+  onStep?: (text: string) => void
+  onArtifact?: (item: ManusArtifact) => void
+  onError?: (err: unknown) => void
+  onClose?: () => void
+}
+
+/**
+ * Manus：默认 message 为步骤文本；自定义事件 artifact 为可下载文件（JSON）。
+ */
+export function openManusChatSse(url: string, handlers: ManusChatSseHandlers = {}) {
+  const es = new EventSource(url)
+  let closed = false
+
+  const close = () => {
+    if (closed) return
+    closed = true
+    es.close()
+    handlers.onClose?.()
+  }
+
+  es.onmessage = (ev) => {
+    handlers.onStep?.(ev.data ?? '')
+  }
+
+  es.addEventListener('artifact', (ev) => {
+    try {
+      const raw = (ev as MessageEvent).data ?? '{}'
+      const o = JSON.parse(raw) as Record<string, string>
+      handlers.onArtifact?.({
+        fileId: o.fileId ?? '',
+        filename: o.filename ?? 'report.pdf',
+      })
+    } catch {
+      /* ignore */
+    }
+  })
+
+  es.onerror = (ev) => {
+    if (closed) return
+    if (es.readyState === EventSource.CONNECTING) {
+      handlers.onError?.(ev)
+    }
+    close()
+  }
+
+  return { close, raw: es }
+}
+
+export type DownloadPdfParams = {
+  baseUrl: string
+  fileId: string
+  chatId: string
+  apiKey?: string
+}
+
+export async function downloadPdfBlob(params: DownloadPdfParams): Promise<Blob> {
+  const u = new URL(`${params.baseUrl.replace(/\/$/, '')}/ai/files/pdf/download`)
+  u.searchParams.set('fileId', params.fileId)
+  u.searchParams.set('chatId', params.chatId)
+  if (params.apiKey && params.apiKey.length > 0) {
+    u.searchParams.set('apiKey', params.apiKey)
+  }
+  const res = await fetch(u.toString(), { method: 'GET' })
+  if (!res.ok) {
+    let detail = `${res.status}`
+    try {
+      const j = (await res.json()) as { message?: string }
+      if (j?.message) detail = j.message
+    } catch {
+      try {
+        const t = await res.text()
+        if (t) detail = t.slice(0, 200)
+      } catch {
+        /* ignore */
+      }
+    }
+    throw new Error(detail)
+  }
+  return res.blob()
+}
+
+export function triggerBlobDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename || 'download.pdf'
+  a.rel = 'noopener'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+}

@@ -18,13 +18,12 @@ public class ToolRegistration {
 
     // 注册工具
     @Bean
-    public ToolCallback[] allTools() {
+    public ToolCallback[] allTools(PDFGenerationTool pdfGenerationTool) {
         FileOperationTool fileOperationTool = new FileOperationTool();
         WebSearchTool webSearchTool = new WebSearchTool(searchApiKey);
         WebScrapingTool webScrapingTool = new WebScrapingTool();
         ResourceDownLoadTool resourceDownloadTool = new ResourceDownLoadTool();
         TerminalOperationTool terminalOperationTool = new TerminalOperationTool();
-        PDFGenerationTool pdfGenerationTool = new PDFGenerationTool();
         TerminateTool terminateTool = new TerminateTool();
         return ToolCallbacks.from(
                 fileOperationTool,

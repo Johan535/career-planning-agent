@@ -3,7 +3,15 @@ import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { API_BASE, OPTIONAL_API_KEY } from '../config/api'
 import { createChatId } from '../utils/id'
-import { createSseGetUrl, createTypewriter, openEventSourceText, type TypewriterController } from '../utils/sse'
+import {
+  createSseGetUrl,
+  createTypewriter,
+  downloadPdfBlob,
+  openManusChatSse,
+  triggerBlobDownload,
+  type ManusArtifact,
+  type TypewriterController,
+} from '../utils/sse'
 
 type Role = 'user' | 'ai'
 type ChatMsg = {
@@ -22,6 +30,10 @@ const esCloser = ref<null | (() => void)>(null)
 const stepTypewriter = ref<TypewriterController | null>(null)
 const hasChatted = ref(false)
 const sentFlash = ref(false)
+/** 本会话内工具生成的可下载文件（由 SSE artifact 推送） */
+const artifacts = ref<ManusArtifact[]>([])
+const downloadError = ref<string | null>(null)
+const downloadingId = ref<string | null>(null)
 
 const canSend = computed(() => !sending.value && input.value.trim().length > 0)
 
@@ -62,6 +74,8 @@ async function send() {
   hasChatted.value = true
   sending.value = true
   input.value = ''
+  artifacts.value = []
+  downloadError.value = null
 
   const userMsg: ChatMsg = {
     id: `${Date.now()}-u`,
@@ -128,9 +142,15 @@ async function send() {
   if (OPTIONAL_API_KEY) params.apiKey = OPTIONAL_API_KEY
   const url = createSseGetUrl(`${API_BASE}/ai/manus/chat`, params)
 
-  const handle = openEventSourceText(url, {
-    onText: (delta) => {
+  const handle = openManusChatSse(url, {
+    onStep: (delta) => {
       beginNewStepBubble(delta)
+    },
+    onArtifact: (item) => {
+      if (!item.fileId) return
+      if (artifacts.value.some((x) => x.fileId === item.fileId)) return
+      artifacts.value = [...artifacts.value, { fileId: item.fileId, filename: item.filename || 'report.pdf' }]
+      void nextTick().then(() => scrollToBottom(false))
     },
     onError: () => {
       if (stepSeq === 0) {
@@ -149,6 +169,24 @@ async function send() {
   })
 
   esCloser.value = () => handle.close()
+}
+
+async function downloadArtifact(art: ManusArtifact) {
+  downloadError.value = null
+  downloadingId.value = art.fileId
+  try {
+    const blob = await downloadPdfBlob({
+      baseUrl: API_BASE,
+      fileId: art.fileId,
+      chatId: chatId.value,
+      apiKey: OPTIONAL_API_KEY || undefined,
+    })
+    triggerBlobDownload(blob, art.filename || 'report.pdf')
+  } catch (e) {
+    downloadError.value = e instanceof Error ? e.message : '下载失败'
+  } finally {
+    downloadingId.value = null
+  }
 }
 
 function stop() {
@@ -223,6 +261,24 @@ watch(
               <div v-if="m.role === 'ai' && m.streaming" class="caret" aria-hidden="true"></div>
             </div>
           </div>
+        </div>
+
+        <div v-if="artifacts.length" class="artifactBar">
+          <div class="artifactTitle">生成文件</div>
+          <div class="artifactList">
+            <div v-for="a in artifacts" :key="a.fileId" class="artifactRow">
+              <span class="artifactName">{{ a.filename }}</span>
+              <button
+                type="button"
+                class="btn dl"
+                :disabled="downloadingId === a.fileId"
+                @click="downloadArtifact(a)"
+              >
+                {{ downloadingId === a.fileId ? '下载中…' : '下载到本地' }}
+              </button>
+            </div>
+          </div>
+          <p v-if="downloadError" class="artifactErr">{{ downloadError }}</p>
         </div>
 
         <div class="composer">
@@ -406,7 +462,57 @@ watch(
   backdrop-filter: blur(14px);
   overflow: hidden;
   display: grid;
-  grid-template-rows: 1fr auto;
+  grid-template-rows: 1fr auto auto;
+}
+
+.artifactBar {
+  border-top: 1px solid rgba(120, 220, 255, 0.14);
+  padding: 10px 14px 12px;
+  background: rgba(6, 8, 16, 0.45);
+  max-height: 160px;
+  overflow: auto;
+}
+.artifactTitle {
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  color: rgba(35, 255, 200, 0.88);
+  margin-bottom: 8px;
+}
+.artifactList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.artifactRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.artifactName {
+  font-size: 13px;
+  color: rgba(235, 252, 255, 0.85);
+  word-break: break-all;
+}
+.btn.dl {
+  min-width: auto;
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  cursor: pointer;
+  color: rgba(235, 252, 255, 0.92);
+  border: 1px solid rgba(35, 255, 200, 0.28);
+  background: linear-gradient(135deg, rgba(35, 255, 200, 0.2), rgba(30, 240, 255, 0.16));
+}
+.btn.dl:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.artifactErr {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: rgba(255, 140, 160, 0.95);
 }
 
 .chat {
